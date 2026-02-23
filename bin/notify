@@ -1,0 +1,56 @@
+#!/bin/bash
+set -euo pipefail
+
+# Send a macOS notification. On click, run open-review for the ticket.
+# Usage: notify --title <text> --message <text> --ticket <TICKET-ID>
+
+ORCH_HOME="${ORCH_HOME:-$HOME/.orchestrator}"
+
+title=""
+message=""
+ticket=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --title)   title="$2";   shift 2 ;;
+    --message) message="$2";  shift 2 ;;
+    --ticket)  ticket="$2";   shift 2 ;;
+    *) echo "Usage: $0 --title <text> --message <text> --ticket <TICKET-ID>" >&2; exit 2 ;;
+  esac
+done
+
+if [[ -z "$title" ]] || [[ -z "$message" ]]; then
+  echo "Usage: $0 --title <text> --message <text> [--ticket <TICKET-ID>]" >&2
+  exit 2
+fi
+
+open_review_cmd=""
+if [[ -n "$ticket" ]]; then
+  open_review_script="$ORCH_HOME/bin/open-review"
+  if [[ -f "$open_review_script" ]]; then
+    open_review_cmd="$open_review_script $ticket"
+  fi
+fi
+
+if command -v terminal-notifier &>/dev/null; then
+  if [[ -n "$open_review_cmd" ]]; then
+    terminal-notifier \
+      -title "Orchestrator" \
+      -subtitle "$title" \
+      -message "$message" \
+      -sound Glass \
+      -execute "$open_review_cmd"
+  else
+    terminal-notifier \
+      -title "Orchestrator" \
+      -subtitle "$title" \
+      -message "$message" \
+      -sound Glass
+  fi
+else
+  osascript -e "display notification \"$message\" with title \"Orchestrator\" subtitle \"$title\""
+  if [[ -n "$open_review_cmd" ]]; then
+    echo "Click not available (install terminal-notifier). Run: $open_review_cmd" >&2
+  fi
+fi
+
+exit 0

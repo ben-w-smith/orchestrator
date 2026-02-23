@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://orchestrator.local/schemas/decision-resolved.json",
+  "title": "Decision Resolution Message",
+  "description": "Message sent by orchestrator to sub-agent with the resolution of an escalated decision",
+  "type": "object",
+  "required": ["id", "timestamp", "from", "to", "type", "payload"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique message id, e.g. <ticket>-decision-<seq>-resolved"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp"
+    },
+    "from": {
+      "const": "orchestrator",
+      "description": "Sender"
+    },
+    "to": {
+      "type": "string",
+      "pattern": "^sub-agent:.+",
+      "description": "Recipient: sub-agent:<ticket-id>"
+    },
+    "type": {
+      "const": "decision_resolved",
+      "description": "Message type"
+    },
+    "payload": {
+      "type": "object",
+      "required": ["decision_id", "resolution", "rationale", "resolved_by"],
+      "properties": {
+        "decision_id": {
+          "type": "string",
+          "description": "Id of the original decision_needed message"
+        },
+        "resolution": {
+          "type": "string",
+          "description": "Chosen option: A, B, etc."
+        },
+        "rationale": {
+          "type": "string",
+          "description": "Why this was chosen"
+        },
+        "resolved_by": {
+          "type": "string",
+          "enum": ["orchestrator", "human"],
+          "description": "Who made the decision"
+        }
+      }
+    }
+  }
+}

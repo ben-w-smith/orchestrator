@@ -1,0 +1,56 @@
+#!/bin/bash
+set -euo pipefail
+
+# Check status of a sub-agent: whether PID is running and inbox state.
+# Usage: check-agent --ticket <TICKET-ID>
+
+ORCH_HOME="${ORCH_HOME:-$HOME/.orchestrator}"
+
+ticket=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --ticket) ticket="$2"; shift 2 ;;
+    *) echo "Usage: $0 --ticket <TICKET-ID>" >&2; exit 2 ;;
+  esac
+done
+
+if [[ -z "$ticket" ]]; then
+  echo "Usage: $0 --ticket <TICKET-ID>" >&2
+  exit 2
+fi
+
+manifest="$ORCH_HOME/manifest.json"
+if [[ ! -f "$manifest" ]]; then
+  echo "Manifest not found." >&2
+  exit 3
+fi
+
+pid="$(jq -r --arg t "$ticket" '.worktrees[$t].sub_agent_pid // empty' "$manifest")"
+
+if [[ -z "$pid" ]]; then
+  echo "ticket: $ticket"
+  echo "status: no sub_agent_pid in manifest"
+  exit 0
+fi
+
+if kill -0 "$pid" 2>/dev/null; then
+  echo "ticket: $ticket"
+  echo "pid: $pid"
+  echo "status: running"
+else
+  echo "ticket: $ticket"
+  echo "pid: $pid"
+  echo "status: not running (process exited or invalid)"
+fi
+
+inbox_dir="$ORCH_HOME/inboxes/$ticket"
+if [[ -d "$inbox_dir" ]]; then
+  count=$(find "$inbox_dir" -maxdepth 1 -name "*.json" 2>/dev/null | wc -l | tr -d ' ')
+  echo "inbox_messages: $count"
+  if [[ "$count" -gt 0 ]]; then
+    echo "inbox_files:"
+    find "$inbox_dir" -maxdepth 1 -name "*.json" -exec basename {} \; 2>/dev/null | sed 's/^/  /'
+  fi
+fi
+
+exit 0

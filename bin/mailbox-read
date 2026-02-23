@@ -1,0 +1,41 @@
+#!/bin/bash
+set -euo pipefail
+
+# List messages in an inbox, sorted by timestamp. Optionally filter by type.
+# Usage: mailbox-read --inbox <inbox-name> [--type <message-type>]
+# Output: one JSON object per line (sorted by .timestamp)
+
+ORCH_HOME="${ORCH_HOME:-$HOME/.orchestrator}"
+
+inbox=""
+type_filter=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --inbox) inbox="$2";   shift 2 ;;
+    --type)  type_filter="$2"; shift 2 ;;
+    *) echo "Usage: $0 --inbox <inbox-name> [--type <message-type>]" >&2; exit 2 ;;
+  esac
+done
+
+if [[ -z "$inbox" ]]; then
+  echo "Usage: $0 --inbox <inbox-name> [--type <message-type>]" >&2
+  exit 2
+fi
+
+inbox_dir="$ORCH_HOME/inboxes/$inbox"
+if [[ ! -d "$inbox_dir" ]]; then
+  exit 0
+fi
+
+# Collect all JSON and sort by timestamp; optionally filter by .type
+shopt -s nullglob
+files=("$inbox_dir"/*.json)
+if [[ ${#files[@]} -eq 0 ]]; then
+  exit 0
+fi
+
+if [[ -n "$type_filter" ]]; then
+  jq -c . "${files[@]}" 2>/dev/null | jq -n --arg t "$type_filter" '[inputs] | map(select(.type == $t)) | sort_by(.timestamp) | .[]' -c
+else
+  jq -c . "${files[@]}" 2>/dev/null | jq -n '[inputs] | sort_by(.timestamp) | .[]' -c
+fi

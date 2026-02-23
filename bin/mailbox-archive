@@ -1,0 +1,40 @@
+#!/bin/bash
+set -euo pipefail
+
+# Move a message from an inbox to archive. Ticket subdir is created if needed.
+# Usage: mailbox-archive --inbox <inbox-name> --file <filename> [--ticket <TICKET-ID>]
+# If --ticket is omitted, it is derived from the message (payload.ticket or from "sub-agent:<ticket>").
+
+ORCH_HOME="${ORCH_HOME:-$HOME/.orchestrator}"
+
+inbox=""
+file=""
+ticket=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --inbox)  inbox="$2";  shift 2 ;;
+    --file)   file="$2";   shift 2 ;;
+    --ticket) ticket="$2"; shift 2 ;;
+    *) echo "Usage: $0 --inbox <inbox-name> --file <filename> [--ticket <TICKET-ID>]" >&2; exit 2 ;;
+  esac
+done
+
+if [[ -z "$inbox" ]] || [[ -z "$file" ]]; then
+  echo "Usage: $0 --inbox <inbox-name> --file <filename> [--ticket <TICKET-ID>]" >&2
+  exit 2
+fi
+
+src="$ORCH_HOME/inboxes/$inbox/$file"
+if [[ ! -f "$src" ]]; then
+  echo "Message not found: $src" >&2
+  exit 3
+fi
+
+if [[ -z "$ticket" ]]; then
+  ticket="$(jq -r '.payload.ticket // (.from | split(":")[1]) // "unknown"' "$src")"
+fi
+
+archive_dir="$ORCH_HOME/archive/$ticket"
+mkdir -p "$archive_dir"
+mv "$src" "$archive_dir/$file"
+exit 0

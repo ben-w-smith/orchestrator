@@ -11,7 +11,7 @@
 
 ### Tasks
 
-- [ ] 1.1 Create the `~/.orchestrator/` runtime directory structure:
+- [x] 1.1 Create the `~/.orchestrator/` runtime directory structure:
   ```
   ~/.orchestrator/
   ├── manifest.json
@@ -24,17 +24,17 @@
   └── observations.jsonl
   ```
 
-- [ ] 1.2 Write `config/soul.md` with the initial manually-seeded content from spec section 16. This is the orchestrator's persistent personality file.
+- [x] 1.2 Write `config/soul.md` with the initial manually-seeded content from spec section 16. This is the orchestrator's persistent personality file.
 
-- [ ] 1.3 Write `config/message-schemas/stage-complete.json` — JSON schema for the stage completion message (spec section 5, "Stage completion" schema).
+- [x] 1.3 Write `config/message-schemas/stage-complete.json` — JSON schema for the stage completion message (spec section 5, "Stage completion" schema).
 
-- [ ] 1.4 Write `config/message-schemas/decision-needed.json` — JSON schema for the decision escalation message (spec section 5, "Decision escalation" schema).
+- [x] 1.4 Write `config/message-schemas/decision-needed.json` — JSON schema for the decision escalation message (spec section 5, "Decision escalation" schema).
 
-- [ ] 1.5 Write `config/message-schemas/decision-resolved.json` — JSON schema for the decision resolution message (spec section 5, "Decision resolution" schema).
+- [x] 1.5 Write `config/message-schemas/decision-resolved.json` — JSON schema for the decision resolution message (spec section 5, "Decision resolution" schema).
 
-- [ ] 1.6 Write an initial `manifest.json` with empty `projects` and `worktrees` objects. Include the schema structure from spec section 7 and section 12 (cross-project).
+- [x] 1.6 Write an initial `manifest.json` with empty `projects` and `worktrees` objects. Include the schema structure from spec section 7 and section 12 (cross-project).
 
-- [ ] 1.7 Write a setup script `bin/setup` that creates the `~/.orchestrator/` directory structure and symlinks `soul.md`. Should be idempotent (safe to run multiple times).
+- [x] 1.7 Write a setup script `bin/setup` that creates the `~/.orchestrator/` directory structure and symlinks `soul.md`. Should be idempotent (safe to run multiple times).
 
 ### Verification
 - Run `bin/setup` twice — second run should be a no-op.
@@ -49,25 +49,25 @@
 
 ### Tasks
 
-- [ ] 2.1 Write `bin/mailbox-send` — a shell script that:
+- [x] 2.1 Write `bin/mailbox-send` — a shell script that:
   - Takes arguments: `--to <inbox-name>` `--file <message.json>`
   - Validates the JSON is well-formed
   - Writes to a temp file first
   - Atomically moves (`mv`) to `~/.orchestrator/inboxes/<inbox-name>/<filename>.json`
   - Exits with clear error codes
 
-- [ ] 2.2 Write `bin/mailbox-read` — a shell script that:
+- [x] 2.2 Write `bin/mailbox-read` — a shell script that:
   - Takes argument: `--inbox <inbox-name>`
   - Lists all messages in the inbox, sorted by timestamp
   - Optionally: `--type <message-type>` to filter by type
   - Outputs to stdout
 
-- [ ] 2.3 Write `bin/mailbox-archive` — a shell script that:
+- [x] 2.3 Write `bin/mailbox-archive` — a shell script that:
   - Takes argument: `--inbox <inbox-name>` `--file <filename>`
   - Atomically moves the message from inbox to `~/.orchestrator/archive/`
   - Creates archive subdirectory if needed
 
-- [ ] 2.4 Write `bin/mailbox-cleanup` — a shell script that:
+- [x] 2.4 Write `bin/mailbox-cleanup` — a shell script that:
   - Takes argument: `--ticket <TICKET-ID>`
   - Removes all inbox, archive, and review files for that ticket
   - Removes the inbox directory for that ticket
@@ -87,7 +87,7 @@
 
 ### Tasks
 
-- [ ] 3.1 Write `config/sub-agent-prompt.md` — the system prompt injected into every sub-agent via `--system-prompt-file`. Must include:
+- [x] 3.1 Write `config/sub-agent-prompt.md` — the system prompt injected into every sub-agent via `--system-prompt-file`. Must include:
   - Explanation of the mailbox protocol (how to send messages, where inboxes are)
   - The atomic write protocol (write to /tmp first, then mv)
   - When and how to escalate decisions (write a `decision_needed` message)
@@ -96,7 +96,7 @@
   - How to read decision responses from its inbox
   - Reference to the GSD stage commands (spec-gsd, plan-gsd, build-gsd, verify-gsd)
 
-- [ ] 3.2 Write `bin/spawn-agent` — a shell script that:
+- [x] 3.2 Write `bin/spawn-agent` — a shell script that:
   - Takes arguments: `--ticket <TICKET-ID>` `--stage <SPEC|PLAN|BUILD|VERIFY>` `--worktree <path>`
   - Creates a `CLAUDE_CONFIG_DIR` for the agent at `~/.orchestrator/agents/<TICKET-ID>/`
   - Spawns `claude -p` with:
@@ -110,7 +110,7 @@
   - Records PID in manifest via `jq`
   - Creates the agent's inbox directory at `~/.orchestrator/inboxes/<TICKET-ID>/`
 
-- [ ] 3.3 Write `bin/check-agent` — a shell script that:
+- [x] 3.3 Write `bin/check-agent` — a shell script that:
   - Takes argument: `--ticket <TICKET-ID>`
   - Checks if the agent's PID is still running
   - Checks the agent's inbox for unprocessed messages
@@ -129,12 +129,12 @@
 
 ### Tasks
 
-- [ ] 4.1 Write `bin/notify` — a shell script that:
+- [x] 4.1 Write `bin/notify` — a shell script that:
   - Takes arguments: `--title <text>` `--message <text>` `--ticket <TICKET-ID>`
   - Uses `terminal-notifier` if installed, falls back to `osascript`
   - Click action calls `bin/open-review` with the ticket ID
 
-- [ ] 4.2 Write `bin/open-review` — a shell script that:
+- [x] 4.2 Write `bin/open-review` — a shell script that:
   - Takes argument: ticket ID
   - Reads worktree path from manifest via `jq`
   - Reads review file path from `~/.orchestrator/reviews/<TICKET-ID>-review.md`
@@ -155,7 +155,7 @@
 
 ### Tasks
 
-- [ ] 5.1 Write `CLAUDE.md` at the project root. This is what Claude Code reads when starting an orchestrator session. It must include:
+- [x] 5.1 Write `CLAUDE.md` at the project root. This is what Claude Code reads when starting an orchestrator session. It must include:
   - What the orchestrator is and its responsibilities
   - How to read the manifest (`~/.orchestrator/manifest.json`)
   - How to check inboxes (`~/.orchestrator/inboxes/orchestrator/`)
@@ -168,9 +168,9 @@
   - Reference to `soul.md` for preferences
   - The morning brief format (spec section 12)
 
-- [ ] 5.2 Write `templates/review-package.md` — template for the review summary generated when a worktree hits BUILD checkpoint. Include placeholders for: ticket ID, what changed, why, decisions made, decisions deferred, manual testing steps.
+- [x] 5.2 Write `templates/review-package.md` — template for the review summary generated when a worktree hits BUILD checkpoint. Include placeholders for: ticket ID, what changed, why, decisions made, decisions deferred, manual testing steps.
 
-- [ ] 5.3 Write `templates/morning-brief.md` — template for the morning brief format. Include placeholders for: project groupings, worktree statuses, blocked items, items ready for review.
+- [x] 5.3 Write `templates/morning-brief.md` — template for the morning brief format. Include placeholders for: project groupings, worktree statuses, blocked items, items ready for review.
 
 ### Verification
 - Start `claude` in the orchestrator project directory.

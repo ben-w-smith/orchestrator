@@ -1,0 +1,71 @@
+#!/bin/bash
+set -euo pipefail
+
+# Open iTerm2 in the worktree and start Claude Code with review context.
+# Usage: open-review <TICKET-ID>
+
+ORCH_HOME="${ORCH_HOME:-$HOME/.orchestrator}"
+
+ticket="${1:-}"
+if [[ -z "$ticket" ]]; then
+  echo "Usage: $0 <TICKET-ID>" >&2
+  exit 2
+fi
+
+manifest="$ORCH_HOME/manifest.json"
+if [[ ! -f "$manifest" ]]; then
+  echo "Manifest not found." >&2
+  exit 3
+fi
+
+worktree_path="$(jq -r --arg t "$ticket" '.worktrees[$t].worktree_path // empty' "$manifest")"
+if [[ -z "$worktree_path" ]]; then
+  echo "No worktree found for ticket: $ticket" >&2
+  exit 4
+fi
+
+# Expand ~ if present
+if [[ "$worktree_path" == ~* ]]; then
+  worktree_path="${worktree_path/#\~/$HOME}"
+fi
+
+review_file="$ORCH_HOME/reviews/$ticket-review.md"
+append_prompt=""
+if [[ -f "$review_file" ]]; then
+  review_escaped="$(echo "$review_file" | sed 's/\\/\\\\/g; s/"/\\"/g')"
+  append_prompt="--append-system-prompt-file \"$review_escaped\""
+fi
+
+# Escape for AppleScript: backslash-quote backslashes and double-quotes
+worktree_escaped="$(echo "$worktree_path" | sed 's/\\/\\\\/g; s/"/\\"/g')"
+session_cmd="cd \"$worktree_escaped\" && claude --resume $ticket-review $append_prompt"
+
+# Prefer iTerm2; fall back to Terminal
+if [[ -d "/Applications/iTerm.app" ]]; then
+  osascript -e "
+    tell application \"iTerm\"
+      create window with default profile
+      tell current session of current window
+        write text \"$session_cmd\"
+      end tell
+    end tell
+  "
+elif [[ -d "/Applications/iTerm 2.app" ]]; then
+  osascript -e "
+    tell application \"iTerm 2\"
+      create window with default profile
+      tell current session of current window
+        write text \"$session_cmd\"
+      end tell
+    end tell
+  "
+else
+  osascript -e "
+    tell application \"Terminal\"
+      do script \"$session_cmd\"
+      activate
+    end tell
+  "
+fi
+
+exit 0

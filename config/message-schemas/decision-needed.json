@@ -1,0 +1,81 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://orchestrator.local/schemas/decision-needed.json",
+  "title": "Decision Escalation Message",
+  "description": "Message sent by sub-agent to orchestrator when a decision requires escalation",
+  "type": "object",
+  "required": ["id", "timestamp", "from", "to", "type", "payload"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique message id, e.g. <ticket>-decision-<seq>-<timestamp>"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp"
+    },
+    "from": {
+      "type": "string",
+      "pattern": "^sub-agent:.+",
+      "description": "Sender: sub-agent:<ticket-id>"
+    },
+    "to": {
+      "const": "orchestrator",
+      "description": "Recipient"
+    },
+    "type": {
+      "const": "decision_needed",
+      "description": "Message type"
+    },
+    "payload": {
+      "type": "object",
+      "required": [
+        "ticket",
+        "stage",
+        "blocking",
+        "question",
+        "context",
+        "options",
+        "recommendation",
+        "confidence",
+        "impact"
+      ],
+      "properties": {
+        "ticket": { "type": "string", "description": "Ticket/worktree identifier" },
+        "stage": {
+          "type": "string",
+          "enum": ["SPEC", "PLAN", "BUILD", "VERIFY"],
+          "description": "Current stage"
+        },
+        "blocking": {
+          "type": "boolean",
+          "description": "Whether progress is blocked until resolved"
+        },
+        "question": { "type": "string", "description": "What needs to be decided" },
+        "context": {
+          "type": "string",
+          "description": "Reference to plan file section or codebase location"
+        },
+        "options": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Options, e.g. ['A: <description>', 'B: <description>']"
+        },
+        "recommendation": {
+          "type": "string",
+          "description": "Sub-agent recommendation: A, B, etc."
+        },
+        "confidence": {
+          "type": "string",
+          "enum": ["high", "medium", "low"],
+          "description": "Sub-agent confidence in the recommendation"
+        },
+        "impact": {
+          "type": "string",
+          "description": "What changes depending on the decision"
+        }
+      }
+    }
+  }
+}

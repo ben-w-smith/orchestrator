@@ -1,0 +1,42 @@
+#!/bin/bash
+set -euo pipefail
+
+# Remove all state for a ticket: inbox, archive, reviews, and manifest worktree entry.
+# Usage: mailbox-cleanup --ticket <TICKET-ID>
+
+ORCH_HOME="${ORCH_HOME:-$HOME/.orchestrator}"
+
+ticket=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --ticket) ticket="$2"; shift 2 ;;
+    *) echo "Usage: $0 --ticket <TICKET-ID>" >&2; exit 2 ;;
+  esac
+done
+
+if [[ -z "$ticket" ]]; then
+  echo "Usage: $0 --ticket <TICKET-ID>" >&2
+  exit 2
+fi
+
+# Remove inbox directory for this ticket
+rm -rf "$ORCH_HOME/inboxes/$ticket"
+
+# Remove archive directory for this ticket
+rm -rf "$ORCH_HOME/archive/$ticket"
+
+# Remove review files
+rm -f "$ORCH_HOME/reviews/$ticket"-review.md "$ORCH_HOME/reviews/$ticket"-test-steps.md
+
+# Remove worktree from manifest (atomic write)
+manifest="$ORCH_HOME/manifest.json"
+if [[ -f "$manifest" ]]; then
+  tmp=$(mktemp -t "orchestrator-manifest-XXXXXX.json")
+  trap 'rm -f "$tmp"' EXIT
+  last_updated="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  jq --arg t "$ticket" --arg ts "$last_updated" 'del(.worktrees[$t]) | .last_updated = $ts' "$manifest" > "$tmp"
+  mv "$tmp" "$manifest"
+  trap - EXIT
+fi
+
+exit 0

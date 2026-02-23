@@ -1,0 +1,108 @@
+#!/bin/bash
+set -euo pipefail
+
+# Spawn a Claude Code sub-agent for a given ticket and stage in a worktree.
+# Usage: spawn-agent --ticket <TICKET-ID> --stage <SPEC|PLAN|BUILD|VERIFY> --worktree <path> [--prompt "<text>"]
+
+ORCH_HOME="${ORCH_HOME:-$HOME/.orchestrator}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ORCH_REPO="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+ticket=""
+stage=""
+worktree=""
+prompt=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --ticket)  ticket="$2";  shift 2 ;;
+    --stage)   stage="$2";   shift 2 ;;
+    --worktree) worktree="$2"; shift 2 ;;
+    --prompt)  prompt="$2";  shift 2 ;;
+    *) echo "Usage: $0 --ticket <TICKET-ID> --stage <SPEC|PLAN|BUILD|VERIFY> --worktree <path> [--prompt \"<text>\"]" >&2; exit 2 ;;
+  esac
+done
+
+if [[ -z "$ticket" ]] || [[ -z "$stage" ]] || [[ -z "$worktree" ]]; then
+  echo "Usage: $0 --ticket <TICKET-ID> --stage <SPEC|PLAN|BUILD|VERIFY> --worktree <path> [--prompt \"<text>\"]" >&2
+  exit 2
+fi
+
+case "$stage" in
+  SPEC|PLAN|BUILD|VERIFY) ;;
+  *) echo "Invalid stage: $stage" >&2; exit 2 ;;
+esac
+
+if [[ ! -d "$worktree" ]]; then
+  echo "Worktree not found: $worktree" >&2
+  exit 3
+fi
+
+# Resolve sub-agent prompt path: prefer ORCH_HOME (symlinked by setup), else repo config
+prompt_file="$ORCH_HOME/sub-agent-prompt.md"
+if [[ ! -f "$prompt_file" ]] && [[ -f "$ORCH_REPO/config/sub-agent-prompt.md" ]]; then
+  prompt_file="$ORCH_REPO/config/sub-agent-prompt.md"
+fi
+if [[ ! -f "$prompt_file" ]]; then
+  echo "Sub-agent prompt not found. Run bin/setup from the orchestrator repo." >&2
+  exit 4
+fi
+
+agent_config_dir="$ORCH_HOME/agents/$ticket"
+mkdir -p "$agent_config_dir"
+
+inbox_dir="$ORCH_HOME/inboxes/$ticket"
+mkdir -p "$inbox_dir"
+
+log_file="$ORCH_HOME/logs/$ticket-$stage.log"
+mkdir -p "$ORCH_HOME/logs"
+
+if [[ -z "$prompt" ]]; then
+  prompt="Execute $stage stage for $ticket. Read .cursor/plans/$ticket.md for context. Work in: $worktree."
+fi
+
+pid_file="$ORCH_HOME/agents/$ticket/pid"
+(
+  cd "$worktree"
+  export ORCH_HOME
+  export CLAUDE_CONFIG_DIR="$agent_config_dir"
+  nohup bash -c "claude -p \
+    --system-prompt-file \"$prompt_file\" \
+    --allowedTools \"Read,Write,Edit,Bash,Grep,Glob\" \
+    --max-turns 200 \
+    --output-format json \
+    --no-session-persistence \
+    \"$prompt\" \
+    >> \"$log_file\" 2>&1 &
+  echo \$! > \"$pid_file\""
+) >> "$log_file" 2>&1
+
+# Wait briefly for pid file
+for _ in 1 2 3 4 5; do
+  [[ -f "$pid_file" ]] && break
+  sleep 0.5
+done
+pid="$(cat "$pid_file" 2>/dev/null || echo "")"
+rm -f "$pid_file"
+
+if [[ -z "$pid" ]]; then
+  echo "Warning: could not capture sub-agent PID. Check log: $log_file" >&2
+  pid=0
+fi
+
+# Update manifest with sub_agent_pid for this worktree
+manifest="$ORCH_HOME/manifest.json"
+last_updated="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+tmp=$(mktemp -t "orchestrator-manifest-XXXXXX.json")
+trap 'rm -f "$tmp"' EXIT
+if [[ -f "$manifest" ]]; then
+  jq --arg t "$ticket" --argjson pid "$pid" --arg ts "$last_updated" \
+    '(.worktrees[$t] = ((.worktrees[$t] // {}) + {sub_agent_pid: $pid, last_activity: $ts})) | .last_updated = $ts' \
+    "$manifest" > "$tmp"
+else
+  jq -n --arg t "$ticket" --argjson pid "$pid" --arg ts "$last_updated" \
+    '{last_updated: $ts, projects: {}, worktrees: {($t): {sub_agent_pid: $pid, last_activity: $ts}}}' > "$tmp"
+fi
+mv "$tmp" "$manifest"
+trap - EXIT
+
+echo "Spawned sub-agent for $ticket ($stage), PID $pid. Log: $log_file"

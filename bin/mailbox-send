@@ -1,0 +1,49 @@
+#!/bin/bash
+set -euo pipefail
+
+# Send a message to an inbox using atomic write (temp file then mv).
+# Usage: mailbox-send --to <inbox-name> --file <message.json>
+
+ORCH_HOME="${ORCH_HOME:-$HOME/.orchestrator}"
+
+to=""
+file=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --to)   to="$2";   shift 2 ;;
+    --file) file="$2"; shift 2 ;;
+    *) echo "Usage: $0 --to <inbox-name> --file <message.json>" >&2; exit 2 ;;
+  esac
+done
+
+if [[ -z "$to" ]] || [[ -z "$file" ]]; then
+  echo "Usage: $0 --to <inbox-name> --file <message.json>" >&2
+  exit 2
+fi
+
+if [[ ! -f "$file" ]]; then
+  echo "File not found: $file" >&2
+  exit 3
+fi
+
+# Validate JSON
+if ! jq -e . < "$file" >/dev/null 2>&1; then
+  echo "Invalid JSON: $file" >&2
+  exit 4
+fi
+
+filename="$(basename "$file")"
+if [[ "$filename" != *.json ]]; then
+  filename="${filename}.json"
+fi
+
+inbox_dir="$ORCH_HOME/inboxes/$to"
+mkdir -p "$inbox_dir"
+
+tmp=$(mktemp -t "orchestrator-msg-XXXXXX.tmp")
+trap 'rm -f "$tmp"' EXIT
+cp "$file" "$tmp"
+
+mv "$tmp" "$inbox_dir/$filename"
+trap - EXIT
+exit 0

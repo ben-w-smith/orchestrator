@@ -1,0 +1,54 @@
+#!/bin/bash
+set -euo pipefail
+
+# Orchestrator runtime setup. Creates ~/.orchestrator/ and symlinks soul.md from repo.
+# Idempotent: safe to run multiple times.
+
+ORCH_HOME="${ORCH_HOME:-$HOME/.orchestrator}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ORCH_REPO="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+mkdir -p "$ORCH_HOME"/{inboxes/orchestrator,archive,reviews,logs}
+mkdir -p "$ORCH_HOME/bin"
+
+# Initial manifest if missing
+if [[ ! -f "$ORCH_HOME/manifest.json" ]]; then
+  last_updated="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  printf '%s\n' "{\"last_updated\": \"$last_updated\", \"projects\": {}, \"worktrees\": {}}" > "$ORCH_HOME/manifest.json"
+fi
+
+# Soul: symlink from repo config if present
+if [[ -f "$ORCH_REPO/config/soul.md" ]]; then
+  if [[ -L "$ORCH_HOME/soul.md" ]] && [[ "$(readlink "$ORCH_HOME/soul.md")" == "$ORCH_REPO/config/soul.md" ]]; then
+    : # already correct symlink
+  elif [[ -e "$ORCH_HOME/soul.md" ]]; then
+    echo "Warning: $ORCH_HOME/soul.md exists and is not the repo symlink. Leaving it unchanged." >&2
+  else
+    ln -sf "$ORCH_REPO/config/soul.md" "$ORCH_HOME/soul.md"
+  fi
+fi
+
+# Sub-agent prompt: symlink from repo config if present
+if [[ -f "$ORCH_REPO/config/sub-agent-prompt.md" ]]; then
+  if [[ -L "$ORCH_HOME/sub-agent-prompt.md" ]] && [[ "$(readlink "$ORCH_HOME/sub-agent-prompt.md")" == "$ORCH_REPO/config/sub-agent-prompt.md" ]]; then
+    :
+  elif [[ -e "$ORCH_HOME/sub-agent-prompt.md" ]]; then
+    echo "Warning: $ORCH_HOME/sub-agent-prompt.md exists and is not the repo symlink. Leaving it unchanged." >&2
+  else
+    ln -sf "$ORCH_REPO/config/sub-agent-prompt.md" "$ORCH_HOME/sub-agent-prompt.md"
+  fi
+fi
+
+# Empty observations log if missing
+touch -f "$ORCH_HOME/observations.jsonl" 2>/dev/null || true
+
+# Symlink bin scripts so ~/.orchestrator/bin/open-review exists for notifications
+for f in "$ORCH_REPO/bin"/*; do
+  [[ -x "$f" ]] || continue
+  name="$(basename "$f")"
+  if [[ ! -L "$ORCH_HOME/bin/$name" ]] || [[ "$(readlink "$ORCH_HOME/bin/$name")" != "$f" ]]; then
+    ln -sf "$f" "$ORCH_HOME/bin/$name"
+  fi
+done
+
+echo "Orchestrator runtime ready at $ORCH_HOME"

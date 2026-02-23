@@ -59,8 +59,15 @@ When running, the orchestrator creates state at `~/.orchestrator/`:
 └── observations.jsonl      # Pattern observations for soul.md learning
 ```
 
+## Getting started
+
+1. Clone this repo and from its root run: **`./bin/setup`**
+   - Creates `~/.orchestrator/` with inboxes, archive, reviews, logs
+   - Symlinks `soul.md` and `sub-agent-prompt.md` from `config/`
+   - Symlinks all `bin/` scripts to `~/.orchestrator/bin/` (for notifications)
+2. Install [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code/overview) and (optional) **`brew install terminal-notifier`** for clickable macOS notifications.
+3. Start the orchestrator by running **`claude`** in this directory; it will read `CLAUDE.md` and act as the orchestrator.
+
 ## Status
 
-**Design complete.** See `docs/orchestrator-spec.md` for the full specification.
-
-Implementation is tracked in `PLAN.md`.
+**Phases 1–5 implemented.** Foundation, mailbox system, sub-agent prompt & spawner, notifications, and `CLAUDE.md` + templates are in place. Phase 6 (single worktree end-to-end integration test) is next. See `PLAN.md` and `docs/orchestrator-spec.md`.

@@ -1,0 +1,84 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://orchestrator.local/schemas/stage-complete.json",
+  "title": "Stage Completion Message",
+  "description": "Message sent by sub-agent to orchestrator when a GSD stage completes",
+  "type": "object",
+  "required": ["id", "timestamp", "from", "to", "type", "payload"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique message id, e.g. <ticket>-<stage>-complete-<timestamp>"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp"
+    },
+    "from": {
+      "type": "string",
+      "pattern": "^sub-agent:.+",
+      "description": "Sender: sub-agent:<ticket-id>"
+    },
+    "to": {
+      "const": "orchestrator",
+      "description": "Recipient"
+    },
+    "type": {
+      "const": "stage_complete",
+      "description": "Message type"
+    },
+    "payload": {
+      "type": "object",
+      "required": [
+        "ticket",
+        "stage",
+        "plan_file",
+        "result",
+        "decisions_made",
+        "decisions_needing_review",
+        "next_stage",
+        "auto_advance_recommendation",
+        "risk_level"
+      ],
+      "properties": {
+        "ticket": { "type": "string", "description": "Ticket/worktree identifier" },
+        "stage": {
+          "type": "string",
+          "enum": ["SPEC", "PLAN", "BUILD", "VERIFY"],
+          "description": "Stage that just completed"
+        },
+        "plan_file": { "type": "string", "description": "Path to .cursor/plans/TICKET.md" },
+        "result": {
+          "type": "string",
+          "enum": ["success", "partial", "failure"],
+          "description": "Outcome of the stage"
+        },
+        "decisions_made": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Decisions made during the stage"
+        },
+        "decisions_needing_review": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Decisions that need human review"
+        },
+        "next_stage": {
+          "type": "string",
+          "enum": ["PLAN", "BUILD", "VERIFY", "RETRO"],
+          "description": "Recommended next stage"
+        },
+        "auto_advance_recommendation": {
+          "type": "boolean",
+          "description": "Whether orchestrator should auto-advance without human approval"
+        },
+        "risk_level": {
+          "type": "string",
+          "enum": ["low", "medium", "high"],
+          "description": "Risk level of this worktree"
+        }
+      }
+    }
+  }
+}
