@@ -1,0 +1,23 @@
+# OS
+.DS_Store
+
+# Runtime state (managed by orchestrator, not committed)
+manifest.json
+inboxes/
+archive/
+reviews/
+logs/*.log
+observations.jsonl
+
+# Node
+node_modules/
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Secrets
+.env
+.env.*
