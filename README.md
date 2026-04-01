@@ -37,9 +37,12 @@ orchestrator/
 ├── config/                 # Default configs and schemas
 │   ├── soul.md             # Orchestrator personality & preferences
 │   ├── sub-agent-prompt.md # System prompt for sub-agents
+│   ├── coordinator-claude.md # Coordinator-mode CLAUDE.md template (see below)
 │   └── message-schemas/    # JSON schemas for mailbox messages
 ├── docs/                   # Design docs
-│   └── orchestrator-spec.md
+│   ├── orchestrator-spec.md
+│   ├── coordinator-quickstart.md  # Quick start for coordinator mode
+│   └── claude-code-comparison/    # Deep comparison with Claude Code's internal system
 ├── templates/              # Templates for review packages, notifications
 └── CLAUDE.md               # Orchestrator's own Claude Code context
 ```
@@ -67,6 +70,19 @@ When running, the orchestrator creates state at `~/.orchestrator/`:
    - Symlinks all `bin/` scripts to `~/.orchestrator/bin/` (for notifications)
 2. Install [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code/overview) and (optional) **`brew install terminal-notifier`** for clickable macOS notifications.
 3. Start the orchestrator by running **`claude`** in this directory; it will read `CLAUDE.md` and act as the orchestrator.
+
+## Coordinator Mode (Alternative Approach)
+
+Instead of the full custom orchestration layer, you can use Claude Code's built-in agent teams feature with a coordinator-style CLAUDE.md that constrains the lead agent to synthesis and delegation only.
+
+```bash
+# Quick test — no project changes needed
+claude --system-prompt-file ~/personal/orchestrator/config/coordinator-claude.md
+```
+
+Requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`. See [docs/coordinator-quickstart.md](docs/coordinator-quickstart.md) for full setup.
+
+This approach was informed by a [deep comparison](docs/claude-code-comparison/) between this project and Claude Code's internal swarm/coordinator system.
 
 ## Status
 
